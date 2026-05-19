@@ -52,7 +52,7 @@ def ask_question():
     )
 
     if ask is None:
-        root.quit()
+        root.destroy()
         return
 
     ask = ask.strip()
@@ -72,7 +72,7 @@ def ask_question():
         )
 
         if add is None:
-            root.quit()
+            root.destroy()
             return
 
         add = add.strip()
