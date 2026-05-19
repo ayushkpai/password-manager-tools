@@ -5,18 +5,25 @@ root.withdraw()
 
 passwords = {}
 
-def read_from_file():  
+def read_from_file():
+    decrypt_app_texts = ["<currenguajis", "dvssfohvbkjt"]
+    decrypt_password_texts = ["dsufgasudfba", "etvghbtvegcb>"]
+
     with open("passwords.txt") as file:
         for line in file:
             line = line.strip()
             if not line:
                 continue
             app, password = line.split("/")
+            for substring in decrypt_app_texts:
+                app = app.replace(substring, "")
+            for substring in decrypt_password_texts:
+                password = password.replace(substring, "")
             passwords[app] = password
-
+            
 def write_to_file(ask_name, add_name):
     with open("passwords.txt", "a")as file:
-        file.write(ask_name + "/" + add_name + "\n")
+        file.write("<currenguajis" + ask_name + "dvssfohvbkjt" + "/" + "dsufgasudfba" + add_name + "etvghbtvegcb>" + "\n")
 
 add = ""
 
@@ -57,6 +64,7 @@ def ask_question():
     root.after(1000, ask_question)
     read_from_file()
     
+read_from_file()   
 ask_question()
 
 root.mainloop()
