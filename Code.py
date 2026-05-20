@@ -10,7 +10,7 @@ def read_from_file():
     decrypt_password_texts = ["dsufgasudfba", "etvghbtvegcb#>"]
 
     try:
-        with open("passwords.txt", "r") as file:
+        with open("../../../../essentials/.passwords.txt", "r") as file:
             passwords.clear()
 
             for line in file:
@@ -30,10 +30,10 @@ def read_from_file():
                 passwords[app] = password
 
     except FileNotFoundError:
-        open("passwords.txt", "w").close()
+        open("../../../../essentials/.passwords.txt", "w").close()
 
 def write_to_file(app_name, password):
-    with open("passwords.txt", "a") as file:
+    with open("../../../../essentials/.passwords.txt", "a") as file:
         file.write(
             "<#currenguajis"
             + app_name
