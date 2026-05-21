@@ -10,7 +10,7 @@ def read_from_file():
     decrypt_password_texts = ["dsufgasudfba", "etvghbtvegcb#>"]
 
     try:
-        with open("../../../../essentials/.passwords.txt", "r") as file:
+        with open("Users/ayushpai/essentials/.passwords.txt", "r") as file:
             passwords.clear()
 
             for line in file:
