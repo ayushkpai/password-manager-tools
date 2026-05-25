@@ -5,12 +5,26 @@ root.withdraw()
 
 passwords = {}
 
+PASSWORDS_FILE = "/Users/ayushpai/essentials/.password_manager/passwords.txt"
+LOGIN_PASSWORD_FILE = "/Users/ayushpai/essentials/.password_manager/login_password.txt"
+
+def get_login_password():
+    try:
+        with open(LOGIN_PASSWORD_FILE, "r") as file:
+            return file.read().strip()
+
+    except FileNotFoundError:
+        with open(LOGIN_PASSWORD_FILE, "w") as file:
+            file.write("password")
+
+        return "password"
+
 def read_from_file():
-    decrypt_app_texts = ["<#currenguajis", "dvssfohvbkjt"]
-    decrypt_password_texts = ["dsufgasudfba", "etvghbtvegcb#>"]
+    decrypt_app_texts = ["<#[currenguajis", "dvssfohvbkjt"]
+    decrypt_password_texts = ["dsufgasudfba", "etvghbtvegcb]#>"]
 
     try:
-        with open("/Users/ayushpai/essentials/.passwords.txt", "r") as file:
+        with open(PASSWORDS_FILE, "r") as file:
             passwords.clear()
 
             for line in file:
@@ -30,22 +44,22 @@ def read_from_file():
                 passwords[app] = password
 
     except FileNotFoundError:
-        open("/Users/ayushpai/essentials/.passwords.txt", "w").close()
+        open(PASSWORDS_FILE, "w").close()
 
 def write_to_file(app_name, password):
-    with open("/Users/ayushpai/essentials/.passwords.txt", "a") as file:
+    with open(PASSWORDS_FILE, "a") as file:
         file.write(
-            "<#currenguajis"
+            "<#[currenguajis"
             + app_name
             + "dvssfohvbkjt"
             + "/"
             + "dsufgasudfba"
             + password
-            + "etvghbtvegcb#>"
+            + "etvghbtvegcb]#>"
             + "\n"
         )
 
-def ask_question():
+def run():
     ask = simpledialog.askstring(
         "Password manager",
         "Type the name of an app"
@@ -68,7 +82,8 @@ def ask_question():
     else:
         add = simpledialog.askstring(
             "Password manager",
-            f"What is the password of {ask}"
+            f"What is the password of {ask}",
+            show="•"
         )
 
         if add is None:
@@ -86,7 +101,29 @@ def ask_question():
         )
 
     read_from_file()
-    root.after(1000, ask_question)
+    root.after(1000, run)
+
+def ask_question():
+    login = simpledialog.askstring(
+        "Password manager",
+        "Enter password",
+        show="•"
+    )
+
+    saved_password = get_login_password()
+
+    if login == saved_password:
+        run()
+
+    elif login is None:
+        root.destroy()
+
+    else:
+        messagebox.showinfo(
+            "Password manager",
+            "Unauthorized access"
+        )
+        root.destroy()
 
 read_from_file()
 ask_question()
