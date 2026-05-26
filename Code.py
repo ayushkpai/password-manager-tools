@@ -6,9 +6,21 @@ root.withdraw()
 passwords = {}
 
 PASSWORDS_FILE = "/Users/ayushpai/essentials/.password_manager/passwords.txt"
-LOGIN_PASSWORD_FILE = "/Users/ayushpai/essentials/.password_manager/login_password.txt"
+LOGIN_PASSWORD_FILE = "/Users/ayushpai/essentials/.password_manager/login/password.txt"
+LOGIN_USERNAME_FILE = "/Users/ayushpai/essentials/.password_manager/login/username.txt"
 
-def get_login_password():
+def get_username():
+    try:
+        with open(LOGIN_USERNAME_FILE, "r") as file:
+            return file.read().strip()
+
+    except FileNotFoundError:
+        with open(LOGIN_USERNAME_FILE, "w") as file:
+            file.write("password")
+
+        return "password"
+    
+def get_password():
     try:
         with open(LOGIN_PASSWORD_FILE, "r") as file:
             return file.read().strip()
@@ -104,18 +116,35 @@ def run():
     root.after(1000, run)
 
 def ask_question():
-    login = simpledialog.askstring(
+    username = simpledialog.askstring(
+        "Password manager",
+        "Enter username",
+        show="•"
+    )
+
+    saved_password = get_username()
+
+    if username == saved_password:
+        password = simpledialog.askstring(
         "Password manager",
         "Enter password",
         show="•"
     )
+        saved_password = get_password()
+        if password == saved_password:
+            run()
 
-    saved_password = get_login_password()
+        elif username is None:
+            root.destroy()
 
-    if login == saved_password:
-        run()
+        else:
+            messagebox.showinfo(
+                "Password manager",
+                "Unauthorized access"
+            )
+        root.destroy()
 
-    elif login is None:
+    elif username is None:
         root.destroy()
 
     else:
