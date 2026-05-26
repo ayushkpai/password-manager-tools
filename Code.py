@@ -78,7 +78,7 @@ def run():
     )
 
     if ask is None:
-        root.destroy()
+        root.quit()
         return
 
     ask = ask.strip()
