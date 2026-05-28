@@ -99,7 +99,7 @@ def run():
         )
 
         if add is None:
-            root.destroy()
+            root.quit()
             return
 
         add = add.strip()
