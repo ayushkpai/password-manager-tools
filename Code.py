@@ -9,67 +9,74 @@ PASSWORDS_FILE = "/Users/ayushpai/essentials/.password_manager/passwords.txt"
 LOGIN_PASSWORD_FILE = "/Users/ayushpai/essentials/.password_manager/login/password.txt"
 LOGIN_USERNAME_FILE = "/Users/ayushpai/essentials/.password_manager/login/username.txt"
 
+
+def encrypt(text):
+    return f"<#[currenguajis{text}dvssfohvbkjt]#>"
+
+
+def decrypt(text):
+    text = text.strip()
+
+    text = text.replace("<#[currenguajis", "")
+    text = text.replace("dvssfohvbkjt]#>", "")
+
+    return text
+
+
 def get_username():
     try:
         with open(LOGIN_USERNAME_FILE, "r") as file:
-            return file.read().strip()
+            return decrypt(file.read())
 
     except FileNotFoundError:
         with open(LOGIN_USERNAME_FILE, "w") as file:
-            file.write("password")
+            file.write(encrypt("password"))
 
         return "password"
-    
+
+
 def get_password():
     try:
         with open(LOGIN_PASSWORD_FILE, "r") as file:
-            return file.read().strip()
+            return decrypt(file.read())
 
     except FileNotFoundError:
         with open(LOGIN_PASSWORD_FILE, "w") as file:
-            file.write("password")
+            file.write(encrypt("password"))
 
         return "password"
 
+
 def read_from_file():
-    decrypt_app_texts = ["<#[currenguajis", "dvssfohvbkjt"]
-    decrypt_password_texts = ["dsufgasudfba", "etvghbtvegcb]#>"]
+    passwords.clear()
 
     try:
         with open(PASSWORDS_FILE, "r") as file:
-            passwords.clear()
-
             for line in file:
                 line = line.strip()
 
-                if not line:
+                if line == "":
                     continue
 
-                app, password = line.split("/")
+                line = decrypt(line)
 
-                for substring in decrypt_app_texts:
-                    app = app.replace(substring, "")
+                if "/" not in line:
+                    continue
 
-                for substring in decrypt_password_texts:
-                    password = password.replace(substring, "")
+                app, password = line.split("/", 1)
 
                 passwords[app] = password
 
     except FileNotFoundError:
         open(PASSWORDS_FILE, "w").close()
 
+
 def write_to_file(app_name, password):
     with open(PASSWORDS_FILE, "a") as file:
         file.write(
-            "<#[currenguajis"
-            + app_name
-            + "dvssfohvbkjt"
-            + "/"
-            + "dsufgasudfba"
-            + password
-            + "etvghbtvegcb]#>"
-            + "\n"
+            encrypt(f"{app_name}/{password}") + "\n"
         )
+
 
 def run():
     ask = simpledialog.askstring(
@@ -78,17 +85,15 @@ def run():
     )
 
     if ask is None:
-        root.quit()
+        root.destroy()
         return
 
     ask = ask.strip()
 
     if ask in passwords:
-        result = passwords[ask]
-
         messagebox.showinfo(
             "Password manager",
-            f"The password of {ask} is {result}"
+            f"The password of {ask} is {passwords[ask]}"
         )
 
     else:
@@ -99,12 +104,13 @@ def run():
         )
 
         if add is None:
-            root.quit()
+            root.destroy()
             return
 
         add = add.strip()
 
         passwords[ask] = add
+
         write_to_file(ask, add)
 
         messagebox.showinfo(
@@ -112,8 +118,8 @@ def run():
             "Password saved successfully"
         )
 
-    read_from_file()
-    root.after(1000, run)
+    root.after(100, run)
+
 
 def ask_question():
     username = simpledialog.askstring(
@@ -122,37 +128,39 @@ def ask_question():
         show="•"
     )
 
-    saved_password = get_username()
+    if username is None:
+        root.destroy()
+        return
 
-    if username == saved_password:
+    if username == get_username():
+
         password = simpledialog.askstring(
-        "Password manager",
-        "Enter password",
-        show="•"
-    )
-        saved_password = get_password()
-        if password == saved_password:
+            "Password manager",
+            "Enter password",
+            show="•"
+        )
+
+        if password is None:
+            root.destroy()
+            return
+
+        if password == get_password():
             run()
 
-        elif username is None:
-            root.destroy()
-
         else:
-            messagebox.showinfo(
+            messagebox.showerror(
                 "Password manager",
                 "Unauthorized access"
             )
-        root.destroy()
-
-    elif username is None:
-        root.destroy()
+            root.destroy()
 
     else:
-        messagebox.showinfo(
+        messagebox.showerror(
             "Password manager",
             "Unauthorized access"
         )
         root.destroy()
+
 
 read_from_file()
 ask_question()
