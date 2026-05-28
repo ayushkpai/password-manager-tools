@@ -1,13 +1,17 @@
+from dotenv import load_dotenv
+import os
 from tkinter import messagebox, simpledialog, Tk
+
+load_dotenv()
 
 root = Tk()
 root.withdraw()
 
 passwords = {}
 
-PASSWORDS_FILE = "/Users/ayushpai/essentials/.password_manager/passwords.txt"
-LOGIN_PASSWORD_FILE = "/Users/ayushpai/essentials/.password_manager/login/password.txt"
-LOGIN_USERNAME_FILE = "/Users/ayushpai/essentials/.password_manager/login/username.txt"
+PASSWORDS_FILE = os.getenv("PASSWORDS_FILE")
+LOGIN_USERNAME_FILE = os.getenv("USERNAME_FILE")
+LOGIN_PASSWORD_FILE = os.getenv("PASSWORD_FILE")
 
 def encrypt(text):
     return f"<#[currenguajis{text}dvssfohvbkjt]#>"
