@@ -9,10 +9,8 @@ PASSWORDS_FILE = "/Users/ayushpai/essentials/.password_manager/passwords.txt"
 LOGIN_PASSWORD_FILE = "/Users/ayushpai/essentials/.password_manager/login/password.txt"
 LOGIN_USERNAME_FILE = "/Users/ayushpai/essentials/.password_manager/login/username.txt"
 
-
 def encrypt(text):
     return f"<#[currenguajis{text}dvssfohvbkjt]#>"
-
 
 def decrypt(text):
     text = text.strip()
@@ -21,7 +19,6 @@ def decrypt(text):
     text = text.replace("dvssfohvbkjt]#>", "")
 
     return text
-
 
 def get_username():
     try:
@@ -34,7 +31,6 @@ def get_username():
 
         return "password"
 
-
 def get_password():
     try:
         with open(LOGIN_PASSWORD_FILE, "r") as file:
@@ -45,7 +41,6 @@ def get_password():
             file.write(encrypt("password"))
 
         return "password"
-
 
 def read_from_file():
     passwords.clear()
@@ -70,13 +65,11 @@ def read_from_file():
     except FileNotFoundError:
         open(PASSWORDS_FILE, "w").close()
 
-
 def write_to_file(app_name, password):
     with open(PASSWORDS_FILE, "a") as file:
         file.write(
             encrypt(f"{app_name}/{password}") + "\n"
         )
-
 
 def run():
     ask = simpledialog.askstring(
@@ -120,7 +113,6 @@ def run():
 
     root.after(100, run)
 
-
 def ask_question():
     username = simpledialog.askstring(
         "Password manager",
@@ -160,7 +152,6 @@ def ask_question():
             "Unauthorized access"
         )
         root.destroy()
-
 
 read_from_file()
 ask_question()
