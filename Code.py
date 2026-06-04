@@ -1,11 +1,59 @@
 from dotenv import load_dotenv
 import os
-from tkinter import messagebox, simpledialog, Tk
+from tkinter import(
+    messagebox, 
+    Tk, 
+    Toplevel, 
+    Label, 
+    Entry, 
+    Button, 
+    StringVar
+)
 
 load_dotenv()
 
 root = Tk()
 root.withdraw()
+
+def ask_input(title, prompt, show=None):
+    value = StringVar()
+    result = {"value": None}
+
+    win = Toplevel(root)
+    win.title(title)
+    win.geometry("360x150")
+    win.configure(bg="white")
+
+    Label(
+        win,
+        text=prompt,
+        bg="white",
+        fg="black"
+    ).pack(pady=10)
+
+    entry = Entry(
+        win,
+        textvariable=value,
+        show=show,
+        width=35,
+        bg="white",
+        fg="black",
+        insertbackground="black"
+    )
+    entry.pack(pady=5)
+    entry.focus_set()
+
+    def ok():
+        result["value"] = value.get()
+        win.destroy()
+
+    Button(win, text="OK", command=ok).pack(side="left", padx=60, pady=15)
+    Button(win, text="Cancel", command=win.destroy).pack(side="right", padx=60, pady=15)
+
+    win.grab_set()
+    win.wait_window()
+
+    return result["value"]
 
 passwords = {}
 
@@ -76,7 +124,7 @@ def write_to_file(app_name, password):
         )
 
 def run():
-    ask = simpledialog.askstring(
+    ask = ask_input(
         "Password manager",
         "Type the name of an app"
     )
@@ -94,7 +142,7 @@ def run():
         )
 
     else:
-        add = simpledialog.askstring(
+        add = ask_input(
             "Password manager",
             f"What is the password of {ask}",
             show="•"
@@ -118,7 +166,7 @@ def run():
     root.after(100, run)
 
 def ask_question():
-    username = simpledialog.askstring(
+    username = ask_input(
         "Password manager",
         "Enter username",
         show="•"
@@ -130,7 +178,7 @@ def ask_question():
 
     if username == get_username():
 
-        password = simpledialog.askstring(
+        password = ask_input(
             "Password manager",
             "Enter password",
             show="•"
