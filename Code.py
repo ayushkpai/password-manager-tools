@@ -1,211 +1,237 @@
-from dotenv import load_dotenv
 import os
-from tkinter import(
-    messagebox, 
-    Tk, 
-    Toplevel, 
-    Label, 
-    Entry, 
-    Button, 
-    StringVar
-)
+import json
+import base64
+import tkinter as tk
+from tkinter import messagebox, simpledialog
 
-load_dotenv()
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
 
-root = Tk()
-root.withdraw()
+VAULT_FILE = "vault.json"
+ITERATIONS = 600_000
+KEY_LEN = 32
 
-def ask_input(title, prompt, show=None):
-    value = StringVar()
-    result = {"value": None}
+APP_TITLE = "Password Manager"
 
-    win = Toplevel(root)
-    win.title(title)
-    win.geometry("360x150")
-    win.configure(bg="white")
+def derive_key(password, salt):
+    return PBKDF2(password, salt, dkLen=KEY_LEN, count=ITERATIONS)
 
-    Label(
-        win,
-        text=prompt,
-        bg="white",
-        fg="black"
-    ).pack(pady=10)
+def encrypt(text, key):
+    iv = get_random_bytes(12)
+    cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
+    ciphertext, tag = cipher.encrypt_and_digest(text.encode())
 
-    entry = Entry(
-        win,
-        textvariable=value,
-        show=show,
-        width=35,
-        bg="white",
-        fg="black",
-        insertbackground="black"
-    )
-    entry.pack(pady=5)
-    entry.focus_set()
+    return {
+        "iv": base64.b64encode(iv).decode(),
+        "tag": base64.b64encode(tag).decode(),
+        "data": base64.b64encode(ciphertext).decode()
+    }
 
-    def ok():
-        result["value"] = value.get()
-        win.destroy()
-
-    Button(win, text="OK", command=ok).pack(side="left", padx=60, pady=15)
-    Button(win, text="Cancel", command=win.destroy).pack(side="right", padx=60, pady=15)
-
-    win.grab_set()
-    win.wait_window()
-
-    return result["value"]
-
-passwords = {}
-
-PASSWORDS_FILE = os.getenv("PASSWORDS_FILE")
-LOGIN_USERNAME_FILE = os.getenv("USERNAME_FILE")
-LOGIN_PASSWORD_FILE = os.getenv("PASSWORD_FILE")
-
-def encrypt(text):
-    return f"<#[currenguajis{text}dvssfohvbkjt]#>"
-
-def decrypt(text):
-    text = text.strip()
-
-    text = text.replace("<#[currenguajis", "")
-    text = text.replace("dvssfohvbkjt]#>", "")
-
-    return text
-
-def get_username():
+def decrypt(enc, key):
     try:
-        with open(LOGIN_USERNAME_FILE, "r") as file:
-            return decrypt(file.read())
-
-    except FileNotFoundError:
-        with open(LOGIN_USERNAME_FILE, "w") as file:
-            file.write(encrypt("password"))
-
-        return "password"
-
-def get_password():
-    try:
-        with open(LOGIN_PASSWORD_FILE, "r") as file:
-            return decrypt(file.read())
-
-    except FileNotFoundError:
-        with open(LOGIN_PASSWORD_FILE, "w") as file:
-            file.write(encrypt("password"))
-
-        return "password"
-
-def read_from_file():
-    passwords.clear()
-
-    try:
-        with open(PASSWORDS_FILE, "r") as file:
-            for line in file:
-                line = line.strip()
-
-                if line == "":
-                    continue
-
-                line = decrypt(line)
-
-                if "/" not in line:
-                    continue
-
-                app, password = line.split("/", 1)
-
-                passwords[app] = password
-
-    except FileNotFoundError:
-        open(PASSWORDS_FILE, "w").close()
-
-def write_to_file(app_name, password):
-    with open(PASSWORDS_FILE, "a") as file:
-        file.write(
-            encrypt(f"{app_name}/{password}") + "\n"
+        cipher = AES.new(
+            key,
+            AES.MODE_GCM,
+            nonce=base64.b64decode(enc["iv"])
         )
 
-def run():
-    ask = ask_input(
-        "Password manager",
-        "Type the name of an app"
-    )
+        return cipher.decrypt_and_verify(
+            base64.b64decode(enc["data"]),
+            base64.b64decode(enc["tag"])
+        ).decode()
 
-    if ask is None:
-        root.destroy()
-        return
+    except:
+        return None
 
-    ask = ask.strip()
+def load_vault():
+    if not os.path.exists(VAULT_FILE):
+        return None
 
-    if ask in passwords:
-        messagebox.showinfo(
-            "Password manager",
-            f"The password of {ask} is {passwords[ask]}"
-        )
+    try:
+        with open(VAULT_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return None
 
-    else:
-        add = ask_input(
-            "Password manager",
-            f"What is the password of {ask}",
-            show="•"
-        )
+def save_vault(vault):
+    with open(VAULT_FILE, "w") as f:
+        json.dump(vault, f, indent=2)
+    os.chmod(VAULT_FILE, 0o600)
 
-        if add is None:
-            root.destroy()
+class PasswordManager:
+    def __init__(self, root):
+        self.root = root
+        self.root.title(APP_TITLE)
+        self.root.geometry("420x500")
+
+        self.vault = None
+        self.key = None
+
+        self.login_screen()
+
+    def clear(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+    def login_screen(self):
+        self.clear()
+
+        tk.Label(self.root, text="Master Password").pack(pady=10)
+
+        self.pass_entry = tk.Entry(self.root, show="•")
+        self.pass_entry.pack()
+
+        tk.Button(self.root, text="Login", command=self.login).pack(pady=5)
+
+        if not load_vault():
+            tk.Button(self.root, text="Create Account", command=self.create_vault).pack(pady=5)
+
+    def create_vault(self):
+        p1 = simpledialog.askstring(APP_TITLE, "Master password:", show="•")
+        if not p1:
             return
 
-        add = add.strip()
-
-        passwords[ask] = add
-
-        write_to_file(ask, add)
-
-        messagebox.showinfo(
-            "Password manager",
-            "Password saved successfully"
-        )
-
-    root.after(100, run)
-
-def ask_question():
-    username = ask_input(
-        "Password manager",
-        "Enter username",
-        show="•"
-    )
-
-    if username is None:
-        root.destroy()
-        return
-
-    if username == get_username():
-
-        password = ask_input(
-            "Password manager",
-            "Enter password",
-            show="•"
-        )
-
-        if password is None:
-            root.destroy()
+        p2 = simpledialog.askstring(APP_TITLE, "Confirm password:", show="•")
+        if not p2:
             return
 
-        if password == get_password():
-            run()
+        if p1 != p2:
+            messagebox.showerror(APP_TITLE, "Passwords do not match")
+            return
 
-        else:
-            messagebox.showerror(
-                "Password manager",
-                "Unauthorized access"
-            )
-            root.destroy()
+        salt = get_random_bytes(16)
+        key = derive_key(p1, salt)
 
-    else:
-        messagebox.showerror(
-            "Password manager",
-            "Unauthorized access"
-        )
-        root.destroy()
+        vault = {
+            "salt": base64.b64encode(salt).decode(),
+            "verify": encrypt("ok", key),
+            "passwords": {}
+        }
 
-read_from_file()
-ask_question()
+        save_vault(vault)
+        messagebox.showinfo(APP_TITLE, "Account created")
 
-root.mainloop()
+    def login(self):
+        vault = load_vault()
+
+        if not vault:
+            messagebox.showerror(APP_TITLE, "No account found")
+            return
+
+        password = self.pass_entry.get()
+        if not password:
+            return
+
+        salt = base64.b64decode(vault["salt"])
+        key = derive_key(password, salt)
+
+        if decrypt(vault["verify"], key) != "ok":
+            messagebox.showerror(APP_TITLE, "Wrong password")
+            return
+
+        self.vault = vault
+        self.key = key
+        self.main_screen()
+
+    def main_screen(self):
+        self.clear()
+
+        tk.Label(self.root, text="Password Vault").pack(pady=5)
+
+        self.listbox = tk.Listbox(self.root, width=50, height=15)
+        self.listbox.pack()
+
+        self.refresh()
+
+        frame = tk.Frame(self.root)
+        frame.pack(pady=10)
+
+        tk.Button(frame, text="Add", command=self.add).grid(row=0, column=0)
+        tk.Button(frame, text="View", command=self.view).grid(row=0, column=1)
+        tk.Button(frame, text="Delete", command=self.delete).grid(row=0, column=2)
+
+        tk.Button(frame, text="Change Password", command=self.change_master).grid(row=1, column=0)
+        tk.Button(frame, text="Delete Account", command=self.delete_vault).grid(row=1, column=1)
+        tk.Button(frame, text="Logout", command=self.login_screen).grid(row=1, column=2)
+
+    def refresh(self):
+        self.listbox.delete(0, tk.END)
+        for k in self.vault["passwords"]:
+            self.listbox.insert(tk.END, k)
+
+    def add(self):
+        name = simpledialog.askstring(APP_TITLE, "Service name:")
+        if not name:
+            return
+
+        pwd = simpledialog.askstring(APP_TITLE, "Password:", show="•")
+        if not pwd:
+            return
+
+        self.vault["passwords"][name] = encrypt(pwd, self.key)
+        save_vault(self.vault)
+        self.refresh()
+
+    def view(self):
+        item = self.listbox.get(tk.ACTIVE)
+        if not item:
+            return
+
+        enc = self.vault["passwords"].get(item)
+        pwd = decrypt(enc, self.key)
+
+        messagebox.showinfo(APP_TITLE, pwd or "Cannot decrypt")
+
+    def delete(self):
+        item = self.listbox.get(tk.ACTIVE)
+        if not item:
+            return
+
+        self.vault["passwords"].pop(item, None)
+        save_vault(self.vault)
+        self.refresh()
+
+    def change_master(self):
+        n1 = simpledialog.askstring(APP_TITLE, "New master password:", show="•")
+        if not n1:
+            return
+
+        n2 = simpledialog.askstring(APP_TITLE, "Confirm password:", show="•")
+        if not n2:
+            return
+
+        if n1 != n2:
+            messagebox.showerror(APP_TITLE, "Mismatch")
+            return
+
+        new_salt = get_random_bytes(16)
+        new_key = derive_key(n1, new_salt)
+
+        new_data = {}
+
+        for k, v in self.vault["passwords"].items():
+            plain = decrypt(v, self.key)
+            new_data[k] = encrypt(plain, new_key)
+
+        self.vault["salt"] = base64.b64encode(new_salt).decode()
+        self.vault["verify"] = encrypt("ok", new_key)
+        self.vault["passwords"] = new_data
+
+        save_vault(self.vault)
+        messagebox.showinfo(APP_TITLE, "Master password changed")
+
+    def delete_vault(self):
+        confirm = simpledialog.askstring(APP_TITLE, "Type DELETE to confirm")
+
+        if confirm == "DELETE":
+            if os.path.exists(VAULT_FILE):
+                os.remove(VAULT_FILE)
+
+            messagebox.showinfo(APP_TITLE, "Account removed")
+            self.login_screen()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = PasswordManager(root)
+    root.mainloop()
