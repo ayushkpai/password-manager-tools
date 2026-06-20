@@ -3,19 +3,32 @@ import json
 import base64
 import tkinter as tk
 from tkinter import messagebox, simpledialog
+from dotenv import load_dotenv
+load_dotenv()
 
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Hash import SHA256
 from Crypto.Random import get_random_bytes
 
-VAULT_FILE = "vault.json"
+raw_path = os.getenv("VAULT_PATH", ".pm.json")
+VAULT_FILE = os.path.expanduser(os.path.expandvars(raw_path))
 ITERATIONS = 600_000
 KEY_LEN = 32
 
 APP_TITLE = "Password Manager"
 
+def b64d(x):
+    return base64.b64decode(x)
+
 def derive_key(password, salt):
-    return PBKDF2(password, salt, dkLen=KEY_LEN, count=ITERATIONS)
+    return PBKDF2(
+        password,
+        salt,
+        dkLen=KEY_LEN,
+        count=ITERATIONS,
+        hmac_hash_module=SHA256
+    )
 
 def encrypt(text, key):
     iv = get_random_bytes(12)
@@ -33,31 +46,31 @@ def decrypt(enc, key):
         cipher = AES.new(
             key,
             AES.MODE_GCM,
-            nonce=base64.b64decode(enc["iv"])
+            nonce=b64d(enc["iv"])
         )
 
         return cipher.decrypt_and_verify(
-            base64.b64decode(enc["data"]),
-            base64.b64decode(enc["tag"])
+            b64d(enc["data"]),
+            b64d(enc["tag"])
         ).decode()
 
-    except:
+    except Exception:
         return None
 
 def load_vault():
     if not os.path.exists(VAULT_FILE):
         return None
-
-    try:
-        with open(VAULT_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return None
+    
+    with open(VAULT_FILE, "r") as f:
+        return json.load(f)
 
 def save_vault(vault):
     with open(VAULT_FILE, "w") as f:
         json.dump(vault, f, indent=2)
-    os.chmod(VAULT_FILE, 0o600)
+    try:
+        os.chmod(VAULT_FILE, 0o600)
+    except:
+        pass
 
 class PasswordManager:
     def __init__(self, root):
@@ -84,7 +97,8 @@ class PasswordManager:
 
         tk.Button(self.root, text="Login", command=self.login).pack(pady=5)
 
-        if not load_vault():
+        vault_exists = os.path.exists(VAULT_FILE)
+        if not vault_exists:
             tk.Button(self.root, text="Create Account", command=self.create_vault).pack(pady=5)
 
     def create_vault(self):
@@ -104,6 +118,7 @@ class PasswordManager:
         key = derive_key(p1, salt)
 
         vault = {
+            "version": 1,
             "salt": base64.b64encode(salt).decode(),
             "verify": encrypt("ok", key),
             "passwords": {}
@@ -121,6 +136,7 @@ class PasswordManager:
 
         password = self.pass_entry.get()
         if not password:
+            messagebox.showerror(APP_TITLE, "Password required")
             return
 
         salt = base64.b64decode(vault["salt"])
@@ -157,7 +173,7 @@ class PasswordManager:
 
     def refresh(self):
         self.listbox.delete(0, tk.END)
-        for k in self.vault["passwords"]:
+        for k in (self.vault.get("passwords") or {}):
             self.listbox.insert(tk.END, k)
 
     def add(self):
@@ -165,8 +181,14 @@ class PasswordManager:
         if not name:
             return
 
+        if name in (self.vault.get("passwords") or {}):
+            messagebox.showerror(APP_TITLE, "Service already exists")
+            return
+
         pwd = simpledialog.askstring(APP_TITLE, "Password:", show="•")
-        if not pwd:
+
+        if not pwd or not pwd.strip():
+            messagebox.showerror(APP_TITLE, "Password cannot be empty")
             return
 
         self.vault["passwords"][name] = encrypt(pwd, self.key)
@@ -179,6 +201,10 @@ class PasswordManager:
             return
 
         enc = self.vault["passwords"].get(item)
+        
+        if not enc:
+            return
+
         pwd = decrypt(enc, self.key)
 
         messagebox.showinfo(APP_TITLE, pwd or "Cannot decrypt")
@@ -212,6 +238,11 @@ class PasswordManager:
 
         for k, v in self.vault["passwords"].items():
             plain = decrypt(v, self.key)
+
+            if plain is None:
+                messagebox.showwarning(APP_TITLE, f"Skipping corrupted entry: {k}")
+                continue
+
             new_data[k] = encrypt(plain, new_key)
 
         self.vault["salt"] = base64.b64encode(new_salt).decode()
@@ -222,16 +253,22 @@ class PasswordManager:
         messagebox.showinfo(APP_TITLE, "Master password changed")
 
     def delete_vault(self):
-        confirm = simpledialog.askstring(APP_TITLE, "Type DELETE to confirm")
+        confirm = simpledialog.askstring(APP_TITLE, "Type DELETE to confirm", show="•")
 
         if confirm == "DELETE":
             if os.path.exists(VAULT_FILE):
                 os.remove(VAULT_FILE)
 
+            self.vault = None
+            self.key = None
+
             messagebox.showinfo(APP_TITLE, "Account removed")
             self.login_screen()
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = PasswordManager(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
