@@ -1,0 +1,2 @@
+[console_scripts]
+pm_tools = pm_tools.code:main

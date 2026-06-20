@@ -1,10 +1,16 @@
 [project]
-name = "password-manager-tools"
+name = "pm-tools"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.14"
-
+description = "Encrypted GUI password manager"
+requires-python = ">=3.8"
 dependencies = [
-    "pycryptodome"
+  "pycryptodome",
+  "python-dotenv"
 ]
+
+[project.scripts]
+pm_tools = "pm_tools.code:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

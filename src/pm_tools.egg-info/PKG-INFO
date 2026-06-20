@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: pm-tools
+Version: 0.1.0
+Summary: Encrypted GUI password manager
+Requires-Python: >=3.8
+Requires-Dist: pycryptodome
+Requires-Dist: python-dotenv
