@@ -12,6 +12,12 @@
 
     Also documented in dotfiles
 
+- Create a .env
+
+  ```
+  echo <where_you_want_.pm.json> >> .env
+  ```
+
 - To run the project
 
     ```
