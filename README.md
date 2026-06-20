@@ -21,5 +21,5 @@
 - To run the project
 
     ```
-    uv run Code.py
+    uv run src/pm_tools/code.py
     ```
