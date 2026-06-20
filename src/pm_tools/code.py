@@ -11,7 +11,7 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Hash import SHA256
 from Crypto.Random import get_random_bytes
 
-raw_path = os.getenv("VAULT_PATH", ".pm.json")
+raw_path = os.getenv("VAULT_FILE", ".pm.json")
 VAULT_FILE = os.path.expanduser(os.path.expandvars(raw_path))
 ITERATIONS = 600_000
 KEY_LEN = 32
