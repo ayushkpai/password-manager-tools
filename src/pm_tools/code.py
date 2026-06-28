@@ -4,15 +4,22 @@ import base64
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 from dotenv import load_dotenv
-load_dotenv()
+
+VERIFY_TEXT = "ok"
+CONFIG_FILE = os.path.expanduser("~/.config/pm/.env")
+load_dotenv(CONFIG_FILE)
 
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Hash import SHA256
 from Crypto.Random import get_random_bytes
 
-raw_path = os.getenv("VAULT_FILE", ".pm.json")
-VAULT_FILE = os.path.expanduser(os.path.expandvars(raw_path))
+VAULT_FILE = os.getenv("VAULT_FILE")
+
+if not VAULT_FILE:
+    raise Exception("VAULT_FILE missing in ~/.config/pm/.env")
+
+VAULT_FILE = os.path.expanduser(VAULT_FILE)
 ITERATIONS = 600_000
 KEY_LEN = 32
 
@@ -20,6 +27,9 @@ APP_TITLE = "Password Manager"
 
 def b64d(x):
     return base64.b64decode(x)
+
+def b64e(x):
+    return base64.b64encode(x).decode()
 
 def derive_key(password, salt):
     return PBKDF2(
@@ -69,8 +79,8 @@ def save_vault(vault):
         json.dump(vault, f, indent=2)
     try:
         os.chmod(VAULT_FILE, 0o600)
-    except:
-        pass
+    except Exception as e:
+        print("chmod failed:", e)
 
 class PasswordManager:
     def __init__(self, root):
@@ -119,8 +129,8 @@ class PasswordManager:
 
         vault = {
             "version": 1,
-            "salt": base64.b64encode(salt).decode(),
-            "verify": encrypt("ok", key),
+            "salt": b64e(salt),
+            "verify": encrypt(VERIFY_TEXT, key),
             "passwords": {}
         }
 
@@ -173,7 +183,9 @@ class PasswordManager:
 
     def refresh(self):
         self.listbox.delete(0, tk.END)
-        for k in (self.vault.get("passwords") or {}):
+
+        passwords = self.vault.get("passwords", {})
+        for k in passwords.keys():
             self.listbox.insert(tk.END, k)
 
     def add(self):
@@ -207,7 +219,10 @@ class PasswordManager:
 
         pwd = decrypt(enc, self.key)
 
-        messagebox.showinfo(APP_TITLE, pwd or "Cannot decrypt")
+        if pwd:
+            messagebox.showinfo(APP_TITLE, pwd)
+        else:
+            messagebox.showerror(APP_TITLE, "Decryption failed")
 
     def delete(self):
         item = self.listbox.get(tk.ACTIVE)
