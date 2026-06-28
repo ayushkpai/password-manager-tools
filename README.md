@@ -8,14 +8,18 @@
     git clone git@github.com:ayushkpai/password-manager-tools.git
     ```
     
-- Next install python 
+- Next install python and add dependencies
 
     Also documented in dotfiles
+
+    ```
+    uv add python-dotenv
+    ```
 
 - Create a .env
 
   ```
-  echo VAULT_FILE=<where_you_want_.pm.json> >> .env
+  echo VAULT_FILE=<where_you_want_file.json> >> .env
   ```
 
 - To run the project
